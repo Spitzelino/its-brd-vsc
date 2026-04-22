@@ -117,11 +117,12 @@
   "cmake.ignoreCMakeListsMissing": true,
   "C_Cpp_Runner.msvcBatchPath": "",
   "clangd.arguments": [
-    "--compile-commands-dir=/Users/franz/GIT_HUB/ITS-BRD-VSC/Programs/Karl/out/Karl/ITSboard/Debug"
+    "--compile-commands-dir=c:\\Users\\jankl\\OneDrive\\Desktop\\uni\\gitProjekte\\its-brd-vsc\\Programs\\A1ASM\\out\\A1ASM\\ITSboard_Assembly\\Debug"
   ],
   "debug.hideSlowPreLaunchWarning": true,
   "debug.showInStatusBar": "never",
   "files.associations": {
     "*.s": "arm-debugger.arm"
-  }
+  },
+  "git.ignoreLimitWarning": true
 }
