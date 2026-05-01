@@ -44,8 +44,8 @@ main
     STRB    R1, [R6]    ; switch on LED D09
     STRB    R2, [R7]    ; switch off LED D14
     STRB    R3, [R7]    ; switch off LED D15
-    MOV     R0, #0x03 ; combination of D08 (0x01) and D09 (0x02)
-    STRB    R0, [R6] ; switch on both LEDs at the same time
+    MOV     R0, #0x03   ; combination of D08 (0x01) and D09 (0x02)
+    STRB    R0, [R6]    ; switch on both LEDs at the same time
     b .
     
     ALIGN
