@@ -167,7 +167,7 @@ main	PROC
 ;________________________________________________
 
 ldr R0, =0x20000000         ; R0 = Basisadresse des Arrays
-mov R1, #1000               ; R1 = n=1000 -> obere Grenze
+mov R1, #1000             ; R1 = n=1000 -> obere Grenze
 
 ; Initialisierung: p[0] = 0, p[1] = 0, p[2] = 1
     mov R2, #0
@@ -195,7 +195,7 @@ do2:
     cmp R7, R1              ; ist i*i <= 1000?
     bhi step1               ; wenn i*i > 1000 dann nicht mehr 7 (Sieben hahahhahaha) ->(alle Vielfachen wurden schon gefunden)
 if_1:
-    lrdb R4, [R0, R2]       ; R4 = p[i] -> Byte an Adresse R0 + i lesen
+    ldrb R4, [R0, R2]       ; R4 = p[i] -> Byte an Adresse R0 + i lesen
     cmp R4, #1              ; ist p[i] == 1 wahr?
     bne step1               ; Wenn p[i] == 0 dann ist i keine Primzahl
 for3:
@@ -227,7 +227,7 @@ zaehler_sprung:
     add R2, R2, #1          ; i++ (nächsten eintrag Prüfen)
     b until_zaehler         ; zurück zum SchleifenKopf/Anfang
 zaehler_fertig:
-    str R5                  ; Speicheret die end Anzahl der Primzahlen im Speicher an der Stelle R5
+    str R5, [R0, #1004]   ; Speicheret die end Anzahl der Primzahlen im Speicher an der Stelle R5
 
 
 

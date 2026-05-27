@@ -233,7 +233,7 @@ zaehler_fertig:
 ;________________________________________________
 
 ldr R0, =0x20000000         ; R0 = Basisadresse des Arrays
-mov R1, #1000               ; R1 = n=1000 -> obere Grenze
+mov R1, #1000             ; R1 = n=1000 -> obere Grenze
 
 ; Initialisierung: p[0] = 0, p[1] = 0, p[2] = 1
     mov R2, #0
@@ -293,4 +293,4 @@ zaehler_sprung:
     add R2, R2, #1          ; i++ (nächsten eintrag Prüfen)
     b until_zaehler         ; zurück zum SchleifenKopf/Anfang
 zaehler_fertig:
-    str R5                  ; Speicheret die end Anzahl der Primzahlen im Speicher an der Stelle R5
+    str R5, [R0, #1004]   ; Speicheret die end Anzahl der Primzahlen im Speicher an der Stelle R5
