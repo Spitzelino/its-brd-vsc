@@ -1,136 +1,25 @@
-;________________________________________________
-; 				Java Code
-;________________________________________________
-
-;public class PrimzahlSieb {
-;    public static void main(String[] args) {
-;       int n = 1000;
-;        boolean[] p = new boolean[n + 1]; //Array erstellen
+;************************************************
+; GT - Grundlagen der Technischen Informatik
+; Aufgabe 4-5-6: PrimzahlSieb
 ;
-;        for (int i = 2; i <= n; i++) p[i] = true; //Alle Zahlen ab 2 werden zuerst als Primzahlen angenommen
-;
-;        for (int i = 2; i * i <= n; i++)
-;            if (p[i]) // wenn true wurde die Zahl wurde noch nicht gestrichen -> Primzahl; Wenn false dann ist keine Primzahl
-;                for (int j = i * i; j <= n; j += i) // das Vielfache wird bestimmt und gestrichen 
-;                    p[j] = false; //Die Zahl wird gestrichen
-;
-;        for (int i = 2; i <= n; i++)
-;            if (p[i]) System.out.println(i); //Ist p[i] == true? Dann ist "i" eine Primzahl obvie wenn es false ist
-;    }
-;}
-
-;________________________________________________
-; 			Speicher Darstellung
-;________________________________________________
-
-;NatZahl :   0   1   2   3   4   5   6   7   8   9  10  11  12  13  ...  1000
-;        -------------------------------------------------------------------
-;primZahl:  [0] [0] [1] [1] [0] [1] [0] [1] [0] [0] [0] [1] [0] [1] ...  [?]
-
-;________________________________________________
-;			Assambler Pseudo Code/Planung
-;________________________________________________
-
-; Wenn von true gesprochen wird ist das im Speicher eine 1 -> false=0, true=1
-;------------ Was soll passieren? ---------------
-; Wie im java Code beschrieben kann man True und False haben also brauchen wir 2 Register im RAM
-; Das erste Register für NatZahl: Welches 2002 Byte groß ist und die Zahlen 0-1000 beinhaltet wobei jede Zahl zwei Byte zu geschrieben wird. (weil ein Byte nur bis 255 geht)
-; Das zweite Register für Primzahl: welches die Echten-Primzahlen welche schon erkannt wurden eintägt. Jede Primzahl wird als 2 Byte gespeichert
-;------------------------------------------------
-
-;------------ Register was ist das? -------------
-; r0 für NatZahl ( p[] (boolean[] p = new boolean[n + 1]) )
-; r1 für 1000 (n=1000)
-; r2 fäng bei 2 an ist im Java Code das "i" also prüfung ob Primzahl 
-; r3 also das "j" im Java Code welches das Vielfache von "i" markiert (j=i*i)
-; r4 Register des aktuellen Arraywert p[i]
-; r5 (optional) Zähler für gefundene Primzahlen (im Java-Code nicht vorhanden, nur für Ausgabe)
-; r6 p[j]
-; r7 für multipikation funktion mul
-;------------------------------------------------
-
-;-------- Hmm jetzt wird es spannend ------------
-; Zu Beginn wird ein boolean-Array erstellt, in dem jede Zahl zunächst als potenzielle Primzahl gilt:
-; - n ist fest auf 1000 gesetzt (obere Grenze).
-; - Array p[] wird mit Größe n + 1 angelegt.
-; - Schleife läuft von Index 2 bis Index 1000.
-; - Jeder Eintrag p[i] wird auf true gesetzt (true = mögliche Primzahl).
-; - Die Indizes 0 und 1 bleiben false, da 0 und 1 per Definition keine Primzahlen sind.
-
-;---------------- Hauptlogik 7 ------------------
-
-; - Äußere Schleife: i läuft von 2 bis n.
-; - Bedingung: i * i <= n (nur bis zur Wurzel von n prüfen, da größere Faktoren bereits abgedeckt sind).
-; -Lade p[i] aus dem Array
-
-; - Wenn p[i] == false:
-; 	-> Zahl wurde bereits gestrichen, also keine Primzahl.
-;  			-> Überspringe diesen Wert und gehe zu i + 1.
-; - Wenn p[i] == true:
-; 	-> i ist eine Primzahl.
-; 			-> Starte innere Schleife zum Streichen der Vielfachen.
-; 			 - INNERE SCHLEIFE (Vielfache streichen):
-; 			 - Startwert: j = i * i (Optimierung, kleinere Vielfache sind bereits entfernt).
-; 			 - Bedingung: solange j <= n gilt.
-; 			 - Aktion: setze p[j] = false (Zahl ist keine Primzahl mehr).
-;			 - Schritt: erhöhe j um i (j = j + i), um das nächste Vielfache zu erreichen.
-
-; - Wiederhole diesen Vorgang, bis j > n.
-
-; ----------- AUSGABE DER PRIMZAHLEN --------------
-; Nach Abschluss des Sieb-Algorithmus werden alle verbleibenden Primzahlen ausgegeben.
-; - Schleife läuft erneut von Index 2 bis Index 1000.
-; - Lade p[i] aus dem Array.
-
-; - Wenn p[i] == true:
-; 	-> i ist eine Primzahl.
-; 		-> Ausgabe erfolgt (wie System.out.println(i).)
-
-; - Wenn p[i] == false:
-; 	-> keine Aktion, Zahl wird ignoriert.
-; 		-> Wiederholung bis i = 1000 erreicht ist.
-
-
-
-; public class PrimzahlSieb {
-;     public static void main(String[] args) {
-;         int n = 1000;
-;         boolean[] p = new boolean[n + 1];
-;                 for (int i = 2; i <= n; i++) p[i] = true;
-;                      for (int i = 2; i * i <= n; i++)
-;                         if (p[i])
-;                              for (int j = i * i; j <= n; j += i)
-;                                 p[j] = false;
-;     }
-; }
-;------------ Register was ist das? -------------
-; R0  = Basisadresse des Arrays (0x20000000)
-; R1  = n = 1000
-; R2  = i (äußere Schleife)
-; R3  = j (innere Schleife, j = i*i, j+=i)
-; R4  = aktueller Arraywert p[i] oder p[j]
-; R5  = Zähler für gefundene Primzahlen
-; R6  = Konstante 0 zum Schreiben (p[j] = 0)
-; R7  = Hilfregister für i*i
-;________________________________________________
-
+; Team:
+;   Xuan Hoang Duy Trinh Matrikel-Nr. 2881544
+;   Jan Klindtworth      Matrikel-Nr. 2884053
+;************************************************
 ;________________________________________________
 ;		       	Assambler Code
 ;________________________________________________
-            AREA MyData, DATA, align = 2
-Basis DCD 0
-
-
-
-
-
+    AREA MyData, DATA, align = 2
+Basis       EQU 0x3e8
+Grenze      FILL Basis + 1
 
 
     AREA |.text|, CODE, READONLY, ALIGN = 3
+    
+    EXTERN initITSboard
     EXPORT main
 main PROC
-
-    ldr R0, =Basis 
+    ldr R0, =Grenze 
     mov R1, #1000      
 ; Initialisierung: p[0] = 0, p[1] = 0, p[2] = 1
     mov R2, #0
@@ -189,7 +78,7 @@ zaehler_sprung
     add R2, R2, #1          ; i++ (nächsten eintrag Prüfen)
     b until_zaehler         ; zurück zum SchleifenKopf/Anfang
 zaehler_fertig
-    str R5, [R0,#1004]   ; Speicheret die end Anzahl der Primzahlen im Speicher an der Stelle R5
+    str R5, [R0,#1004]      ; Speicheret die end Anzahl der Primzahlen im Speicher an der Stelle R5
 
 
 
