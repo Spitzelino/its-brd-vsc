@@ -14,9 +14,9 @@
 
 
                 AREA MyData, DATA, align = 2
-Grenze       EQU    0x3E8                                   ; Definiert die Obergrenze des Suchbereichs auf den Wert 1000
-Basis        FILL   Grenze + 1                              ; Reserviert Speicherplatz für das Sieb-Feld (1 Byte pro Zahl von 0 bis 1000)
-Prim         FILL   0x3BC                                   ; Reserviert Speicherplatz für gefundene Primzahlen (956 Bytes für max. 239 Zahlen)
+Grenze       EQU    1000                                   ; Definiert die Obergrenze des Suchbereichs auf den Wert 1000
+Basis        FILL   Grenze + 1 , 1                          ; Reserviert Speicherplatz für das Sieb-Feld (1 Byte pro Zahl von 0 bis 1000)
+Prim         FILL   Grenze, 1                                   ; Reserviert Speicherplatz für gefundene Primzahlen (956 Bytes für max. 239 Zahlen)
     AREA |.text|, CODE, READONLY, ALIGN = 3
         		EXPORT main
         		EXTERN initITSboard
@@ -29,76 +29,53 @@ main            PROC
     
             ldr     R0,=Basis                               ; Lädt die Startadresse von Basis in das Register R0
             ldr     R1,=Grenze                              ; Lädt die Obergrenze (1000) in das Register R1 
-for_init
+;for_init
 
-            mov     R2, #2                                  ; Kopiert den Startwert 2 in das Register R2 (erste Primzahl) 
-            mov     R4, #1                                  ; Kopiert den Wert 1 (= "ist Primzahl") in das Register R4
-
-until_init
-
-            cmp     R2, R1                                  ; Vergleicht R2 mit R1
-            bhi     end_init                                ; Springt zum Ende, falls i > 1000
-
-do_init
-
-            strb    R4, [R0, R2]                            ; Speichert ein niederwertiges Byte aus R4 (aktueller Arraywert)in die Adresse R0 mit einem Offset von R2
-
-step_init 
-
-            add     R2, #1                                  ; Erhöht R2 um 1 (nächste Zahl) 
-            b       until_init                              ; Springt zurück zum Schleifenanfang
-
-end_init
+;            mov     R2, #2                                  ; Kopiert den Startwert 2 in das Register R2 (erste Primzahl) 
+;            mov     R4, #1                                  ; Kopiert den Wert 1 (= "ist Primzahl") in das Register R4
+;
+;until_init
+;
+;            cmp     R2, R1                                  ; Vergleicht R2 mit R1
+;            bhi     end_init                                ; Springt zum Ende, falls i > 1000
+;
+;do_init
+;
+;            strb    R4, [R0, R2]                            ; Speichert ein niederwertiges Byte aus R4 (aktueller Arraywert)in die Adresse R0 mit einem Offset von R2
+;
+;step_init 
+;
+;            add     R2, #1                                  ; Erhöht R2 um 1 (nächste Zahl) 
+;            b       until_init                              ; Springt zurück zum Schleifenanfang
+;
+;end_init
 
 ;------------------------------------------------
 ;               äußere Schleife
 ;------------------------------------------------
 
-for_7
+for_Sieben
 
-            mov     R2, #1                                  ; Kopiert den Startwert 1 in R2
+            mov     R2, #2                                  ; Kopiert den Startwert 2 in R2
             mov     R6, #0                                  ; Kopiert den Löschwert 0 in R6
 
-untilfor_7
+untilfor_Sieben
 
             mul     R7, R2, R2                              ; Multipliziert i * i und speichert in R7 (Hilfsregister)
             mov     R3, R7                                  ; Schiebt das Vielfache in R3 = j 
             cmp     R3, R1                                  ; Vergleicht R3 mit R1
-            bhi     endfor_7                                ; Springt zum Abspeichern, falls j= i * i > 1000
+            bhi     endfor_Sieben                           ; Springt zum Abspeichern, falls j= i * i > 1000
 
-dofor_7
+dofor_Sieben
 
             ldrb    R4, [R0,R2]                             ; Liest ein Byte aus der Adresse R0 mit einem Offset von R2 und speichert es in R4
-            b       if_7                                    ; Springt zur Primzahl-Prüfung 
-
-stepfor_7
-
-            b       naechster                               ; Springt zum nächsten Schritt 
-
-endfor_7
-
-            b       abspeichern                             ; Springt zur Teilfunktion Abspeichern
-
-
-if_7
+if_Sieben
 
             cmp     R4, #1                                  ; Vergleicht R4 (aktueller Arraywert) mit der Konstanten 1
-            beq     thenif_7                                ; Springt zum Löschen, falls R4 == 1
-            b       endif_7                                 ; Springt weiter, falls R4 == 0 (bereits gelöscht)
+            beq     thenif_Sieben                           ; Springt zum Löschen, falls R4 == 1
+            b       endif_Sieben                            ; Springt weiter, falls R4 == 0 (bereits gelöscht)
 
-thenif_7
-
-            b       for_streichen                           ; Springt in die innere Schleife zum Löschen
-
-endif_7
-
-            b       naechster                               ; Springt zum nächsten Schleifendurchlauf
-
-
-;------------------------------------------------
-;               innere Schleife
-;------------------------------------------------
-
+thenif_Sieben
 
 for_streichen
 
@@ -119,18 +96,23 @@ stepfor_streichen
 
 endfor_streichen   
 
-            b       naechster                               ; Springt zum nächsten Schleifendurchlauf   
+            b       endif_Sieben                            ; Springt zum nächsten Schleifendurchlauf   
 
 
-;------------------------------------------------
-;                   quasi ++i
-;------------------------------------------------
+endif_Sieben
+
+                                     ; Springt zum nächsten Schleifendurchlauf
 
 
-naechster
-
+stepfor_Sieben
             add     R2, #1                                  ; Erhöht R2 um 1 (nächste Zahl) 
-            b       untilfor_7                              ; Springt zurück zur Prüfung der äußeren Schleife
+            b       untilfor_Sieben                              ; Springt zurück zur Prüfung der äußeren Schleife
+
+endfor_Sieben
+
+            b       abspeichern                             ; Springt zur Teilfunktion Abspeichern
+
+
 
 
 ;------------------------------------------------
@@ -154,14 +136,6 @@ untilfor_abspeichern
 dofor_abspeichern
 
             ldrb    R4, [R0, R2]                            ; Liest ein Byte aus der Adresse R0 mit einem Offset von R2 und speichert es in R4
-            b       if_abspeichern                          ; Springt zum Abspeichern  
-    
-stepfor_abspeichern
-
-endfor_abspeichern
-
-            b       forever                                 ; Springt in die Endlosschleife (Programmende)
-
 if_abspeichern
 
             cmp     R4, #1                                  ; Vergleicht R4 mit 1
@@ -178,6 +152,13 @@ endif_abspeichern
 
             add     R2, #1                                  ; Erhöht R2 um 1 (nächste Zahl)    
             b       untilfor_abspeichern                    ; Springt zurück zur Schleifenprüfung der Abspeicherung
+
+stepfor_abspeichern
+
+endfor_abspeichern
+
+            b       forever                                 ; Springt in die Endlosschleife (Programmende)
+
 
 
 
