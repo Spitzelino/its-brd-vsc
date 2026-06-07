@@ -74,7 +74,7 @@ DEFAULT_BRIGHTNESS	DCW     800
 MY_TEXT				DCB		"Hold down different buttons from S0 to S7 and watch D8 to D15.", 0
 
 TEXT_START			DCB		"00:00:00", 0
-TEXT_TITEL			DCB		"== Stoppuhr ==", 0
+TEXT_TITEL			DCB		"-- Stoppuhr --", 0
 
 ;********************************************
 ; Datensegment (8-Byte Grenze)
