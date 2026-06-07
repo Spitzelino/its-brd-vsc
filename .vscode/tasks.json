@@ -28,7 +28,7 @@
             "type": "shell",
             "command": "pyocd",
             "options": {
-                "cwd": "${workspaceFolder}/Programs/PrimzahlSiebASM",
+                "cwd": "${workspaceFolder}/Programs/StoppuhrASM",
                 "shell": {
                     "executable": "cmd.exe",
                     "args": [
@@ -52,7 +52,7 @@
             "type": "shell",
             "command": "pyocd",
             "options": {
-                "cwd": "${workspaceFolder}/Programs/PrimzahlSiebASM",
+                "cwd": "${workspaceFolder}/Programs/StoppuhrASM",
                 "shell": {
                     "executable": "cmd.exe",
                     "args": [
@@ -75,7 +75,7 @@
             "type": "shell",
             "command": "pyocd",
             "options": {
-                "cwd": "${workspaceFolder}/Programs/PrimzahlSiebASM",
+                "cwd": "${workspaceFolder}/Programs/StoppuhrASM",
                 "shell": {
                     "executable": "cmd.exe",
                     "args": [
@@ -114,7 +114,7 @@
             "type": "shell",
             "command": "pyocd",
             "options": {
-                "cwd": "${workspaceFolder}/Programs/PrimzahlSiebASM",
+                "cwd": "${workspaceFolder}/Programs/StoppuhrASM",
                 "shell": {
                     "executable": "cmd.exe",
                     "args": [

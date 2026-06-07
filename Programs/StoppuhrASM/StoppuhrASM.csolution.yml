@@ -17,7 +17,7 @@ solution:
       target-set:
         - set:
           images:
-            - project-context: PrimzahlSiebASM.Debug
+            - project-context: StoppuhrASM.Debug
 
   # List of different build configurations.
   build-types:
@@ -31,4 +31,4 @@ solution:
 
   # List related projects.
   projects:
-    - project: PrimzahlSiebASM.cproject.yml
+    - project: StoppuhrASM.cproject.yml
