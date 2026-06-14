@@ -58,14 +58,6 @@ button_S6			equ (1 << 6)			; Stop  -> HOLD
 button_S7			equ (1 << 7)			; Start -> RUN
 
 ;********************************************
-; Zeitkonstanten mm:ss:nn (Tick = 1 Mikrosekunde) 
-;********************************************
-
-TICK_PRO_NANO		equ 1000
-TICK_PRO_SEKUNDE	equ 100000	
-TICK_PRO_MINUTE		equ 6000000				; 1min = 60s, 1s = 100 Nanosekunden, 1 Nanosekunde = 1000 Ticks  
-
-;********************************************
 ; Externe Funktionen  
 ;********************************************
 
@@ -101,7 +93,8 @@ VAR_NN_E			DCB		0
 	; Variablen für Woche 2: 
 
 STATE				DCD		STATE_INIT		; aktueller Zustand der Finite State Machine (FSM) 
-STOPZEIT			DCD		0				: gestoppte Zeitspanne in Ticks
+STOPZEIT			DCD		0				; gestoppte Zeitspanne in Ticks
+LAST_TICK			DCD		0				; Zeitstempel beim letzten Aufruf	
 ;********************************************
 ; Datensegment (8-Byte Grenze)
 ;********************************************
@@ -116,7 +109,7 @@ STOPZEIT			DCD		0				: gestoppte Zeitspanne in Ticks
 main	PROC
 
 		; --- Hardware-Initialisierung ---
-		BL		initITSboard
+		bl		initITSboard
 
 		ldr   	r1, =DEFAULT_BRIGHTNESS
 		ldrh 	r0, [r1]
@@ -132,96 +125,144 @@ main	PROC
 		mov		R0,#0x01
 		strh	R0,[R1]					; Set UG Bit
 
-		MOV 	R0, #24
+		mov 	R0, #24
 		bl  	lcdSetFont
 
 		; Ihre Initialisierung
-		LDR		R1, = STATE
-		MOV		R0, #STATUS_INIT
+		ldr		R1, = STATE
+		mov		R0, #STATUS_INIT
 		strb	R0, [R1]
 		
-	 	;BL 		UpdateClk
+	 	bl 		UpdateClk
 
 ;--------------------------------------------
 ; Hauptschleife: superloop
 ;--------------------------------------------
 superloop
-		BL		UpdateClk				
+		bl		UpdateClk				
 
-		LDR		R1, =STATE
-		LDR		R2, [R1]				
+		ldr		R1, =STATE
+		ldr		R2, [R1]				
 
 		CMP		R2, #STATUS_RUN
-		BEQ		do_run
+		beq		do_run
 
-		CMP		R2, #STATUS_HOLD
-		BEQ		do_hold
+		cmp		R2, #STATUS_HOLD
+		beq		do_hold
 
-		CMP		R2, #STATUS_INIT
-		BEQ		do_init				
+		cmp		R2, #STATUS_INIT
+		beq		do_init				
 
-		BAL		superloop
+		bal		superloop
 do_run
-		BL		run
-		BAL		superloop
+		bl		run
+		bal		superloop
 do_hold
-		BL		hold
-		BAL		superloop
+		bl		hold
+		bal		superloop
 do_init
-		BL		init
-		BAL		superloop		
+		bl		init
+		bal		superloop		
 
+		ENDP
+
+;--------------------------------------------
+; Unterprogramm: UpdateClk
+;--------------------------------------------
+UpdateClk	PROC
+		push	{lr}
+
+		ldr		R1, =TIMER
+		ldr		R2, [R1]
+
+		ldr		R1, =LAST_TICK
+		ldr 	R3, [R1]
+
+		sub		R0, R2, R3
+		str		R2, [R1]
+
+		pop		{lr}
+		bx		lr
 		ENDP
 
 ;--------------------------------------------
 ; Unterprogramm: readButtons
 ;--------------------------------------------
-
 readButtons PROC
-		push	{lr}
-		LDR		R0,=GPIO_F_PIN
-		ldrh	R0,[R0]
-		and		R0,#0xFF 
-		pop		{lr}
-		bx 		lr
-		ENDP
+        push    {lr}
+        ldr        R0,=GPIO_F_PIN
+        ldrh    R0,[R0]
 
-		
+        ldr        R2, =State
+        ldrh    R1, [R2]
+
+testS5
+        AND        R3, R0, #button_S5
+        cmp        R3, #0
+        bne     testS6
+        mov        R1, #STATUS_INIT
+        strh    R1,[R2]
+        BAL        readButtons_ende
+
+testS6
+        AND        R3, R0, #button_S6
+        CMP        R3, #0
+        bne        testS7
+        CMP        R1, #STATUS_RUN
+        bne        testS7
+        mov        R1, #STATUS_HOLD
+        strh    R1,[R2]
+        BAL        readButtons_ende
+
+testS7
+        AND        R3, R0, #button_S7
+        CMP        R3, #0
+        bne        readButtons_ende
+        CMP        R1, #STATUS_RUN
+        beq     readButtons_ende
+        mov     R1, #STATUS_RUN
+        strh    R1,[R2]
+
+readButtons_ende
+        pop        {PC}
+
+        ENDP
+
 ;--------------------------------------------
 ; Unterprogramm: run
 ;--------------------------------------------
 run		PROC
 		push	{lr}
 
-		LDR		R1, =STOPZEIT
-		LDR		R2, [R1]
-		ADD		R2, R2, R0
-		STR		R2, [R1]
+		ldr		R1, =STOPZEIT
+		ldr		R2, [R1]
+		add		R2, R2, R0
+		str		R2, [R1]
 
-		MOV		R0, R2
-		BL		displayZeit
+		mov		R0, R2
+		bl		displayZeit
 
-		LDR		R1, =GPIO_D_SET
+		ldr		R1, =GPIO_D_SET
 		mov		R0, #LED_D8
 		strh	R0, [R1]
-		LDR		R1, =GPIO_D_CLR
+		ldr		R1, =GPIO_D_CLR
 		mov		R0, #LED_D9
 		strh	R0, [R1]
 
 		bl		readButtons
 		tst		R0, #button_S6
 		bne		run_check_s5			
-		LDR		R1, =STATE
-		MOV		R2, #STATUS_HOLD
-		STR		R2, [R1]
-		B		run_ende
+		ldr		R1, =STATE
+		mov		R2, #STATUS_HOLD
+		str		R2, [R1]
+		b		run_ende
 
 run_check_s5
 		tst		R0, #button_S5
 		bne		run_ende				
-		LDR		R1, =STATE
-		MOV		R2, #STATUS_INIT
-		STR		R2, [R1]
+		ldr		R1, =STATE
+		mov		R2, #STATUS_INIT
+		str		R2, [R1]
 
 run_ende
 		pop		{lr}
@@ -231,36 +272,69 @@ run_ende
 ;--------------------------------------------
 ; Unterprogramm: hold
 ;--------------------------------------------
+hold 	PROC
+		push	{lr}
 
+		ldr		R1, =STOPZEIT
+		ldr		R2, [R1]
+		add		R2, R2, R0
+		str		R2, [R1]
 
-
-
-
-
-test_b6
-
-		tst		R0, #button_S6
-		bne 	test_b7
-		LDR		R1,=GPIO_D_SET
-		mov		R0, #3
+		ldr		R1, =GPIO_D_SET
+		mov		R0, #(LED_D8 :OR: LED_D9)
 		strh	R0, [R1]
-		b		superloop_ende
 
+		bl		readButtons
+		tst		R0, #button_S5
+		bne		hold_check_s7
+		ldr		R1, =STATE
+		mov		R2, #STATUS_INIT
+		str		R2, [R1]
+		b		hold_ende
 
-test_b7
-
+hold_check_s7
 		tst		R0, #button_S7
-		bne 	superloop_ende
-		LDR		R1,=GPIO_D_CLR
-		mov		R0, #LED_D9
-		strh	R0, [R1]
-		LDR		R1,=GPIO_D_CLR
-		mov		R0, #LED_D8
+		bne		hold_ende				
+		ldr		R1, =STATE
+		mov		R2, #STATUS_RUN
+		str		R2, [R1]
+
+hold_ende
+		pop		{lr}
+		bx		lr
+		ENDP
+
+;--------------------------------------------
+; Unterprogramm: init
+;--------------------------------------------
+init	PROC
+		push {lr}
+
+		ldr		R1, STOPZEIT
+		mov		R2, #0
+		str		R2, [R1]
+		mov		R0, #0
+		bl		displayZeit
+
+		ldr		R1, =GPIO_D_CLR
+		mov		R0, #(LED_D8 :OR: LED_D9)
 		strh	R0, [R1]
 
-superloop_ende
-		BAL		superloop				; End of superloop
+		bl		readButtons
+		tst		R0, #button_S7
+		bne		init_ende
+		ldr		R1, =STATE
+		mov		R2, #STATUS_RUN
+		str		R2, [R1]
+
+init_ende
+		pop		{lr}
+		bx		lr
 		ENDP
+
+
+
+
 initDisplay PROC
 
 		push	{lr}
