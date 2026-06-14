@@ -14,92 +14,77 @@
 ; Peripherie-Adressen
 ;******************************************** #
 
-PERIPH_BASE     	equ	0x40000000                 ;Startadresse 
+PERIPH_BASE     	equ	0x40000000                 									; Startadresse 
 AHB1PERIPH_BASE 	equ	(PERIPH_BASE + 0x00020000)
 APB1PERIPH_BASE     equ PERIPH_BASE
 
-GPIOD_BASE			equ	(AHB1PERIPH_BASE + 0x0C00)
-GPIOF_BASE			equ	(AHB1PERIPH_BASE + 0x1400)
-TIM2_BASE           equ (APB1PERIPH_BASE + 0x0000)
+GPIOD_BASE			equ	(AHB1PERIPH_BASE + 0x0C00)									; Basisadresse für LEDs
+GPIOF_BASE			equ	(AHB1PERIPH_BASE + 0x1400)									; Basisadresse für Taster
+TIM2_BASE           equ (APB1PERIPH_BASE + 0x0000)									; Basisadresse für Timer
 	
-GPIO_F_PIN        	equ	(GPIOF_BASE + 0x10)
-
-GPIO_D_PIN			equ	(GPIOD_BASE + 0x10)
-GPIO_D_SET			equ (GPIOD_BASE + 0x18)
-GPIO_D_CLR			equ	(GPIOD_BASE + 0x1A)
+GPIO_F_PIN        	equ	(GPIOF_BASE + 0x10)											; Register zum Lesen der Taster
+GPIO_D_PIN			equ	(GPIOD_BASE + 0x10)											; Register zum Lesen der LED-Zustände	
+GPIO_D_SET			equ (GPIOD_BASE + 0x18)											; Adresse zum Einschalten der LEDs
+GPIO_D_CLR			equ	(GPIOD_BASE + 0x1A)											; Adresse zum Ausschalten der LEDs
 	
-TIMER				equ (TIM2_BASE + 0x24)   ; aktueller Zeitstempel (32 bit)
-TIM2_PSC			equ (TIM2_BASE + 0x28)   ; 
-TIM2_ERG			equ (TIM2_BASE + 0x14)   ; Timerneustart
-
-;********************************************
-; Bitmasken für LEDs und Buttons  
-;********************************************
-
-; änderungen nötig
-
-
-STATUS_INIT			equ 0	
-STATUS_RUN			equ 1
-STATUS_HOLD			equ 2
-
+TIMER				equ (TIM2_BASE + 0x24)   										; Aktueller Zeitstempel (32 Bit)
+TIM2_PSC			equ (TIM2_BASE + 0x28)   										; Timerteiler
+TIM2_ERG			equ (TIM2_BASE + 0x14)   										; Timerneustart
 
 ;********************************************
 ; Bitmasken für LEDs, Bit 0 = D8, Bit 1 = D9 und Buttons, Bit=0 --> Taster Gedrückt   
 ;********************************************
+STATUS_INIT			equ 0															; Zustand: Uhr zurückgesetzt
+STATUS_RUN			equ 1															; Zustand: Uhr läuft
+STATUS_HOLD			equ 2															; Zustand: Anzeige gestoppt
 
-; änderungen nötig
+LED_D8				equ (1 << 0)    												; Zeitmessung aktiv
+LED_D9              equ (1 << 1)    												; Hold aktiv
 
-LED_D8				equ (1 << 1)    		; Zeitmessung aktiv
-LED_D9              equ (1 << 2)    		; Hold aktiv
-
-button_S5			equ (1 << 5)    		; Reset -> INIT
-button_S6			equ (1 << 6)			; Stop  -> HOLD
-button_S7			equ (1 << 7)			; Start -> RUN
+button_S5			equ (1 << 5)    												; Reset -> INIT
+button_S6			equ (1 << 6)													; Stop  -> HOLD
+button_S7			equ (1 << 7)													; Start -> RUN  
 
 ;********************************************
 ; Externe Funktionen  
 ;********************************************
-
     EXTERN initITSboard
     EXTERN GUI_init
 	EXTERN TP_Init
 	EXTERN initTimer
 	EXTERN lcdSetFont
-	EXTERN lcdGotoXY      		; TFT goto x y function
-	EXTERN lcdPrintS			; TFT output function	
-    EXTERN lcdPrintC            ; TFT output one character		
-	EXTERN Delay				; Delay (ms) function
+	EXTERN lcdGotoXY      															; Cursor positionieren
+	EXTERN lcdPrintS																; String ausgeben	
+    EXTERN lcdPrintC            													; Ein Zeichen ausgeben		
+	EXTERN Delay																	
 
 ;********************************************
 ; Datensegment (4-Byte Grenze), Textstartzustand 
 ;********************************************
-
-	AREA MyData, DATA, align = 2
+	AREA MyData, DATA, ALIGN = 2
 
 DEFAULT_BRIGHTNESS	DCW     800
 MY_TEXT				DCB		"Hold down different buttons from S0 to S7 and watch D8 to D15.", 0
 
-TEXT_START			DCB		"00:00:00", 0
-TEXT_TITEL			DCB		"-- Stoppuhr --", 0
+TIMER_TEXT			DCB		"00:00.00", 0
+TITEL_TEXT			DCB		"-- Stoppuhr --", 0
 
-VAR_MM_Z			DCB		0
-VAR_MM_E			DCB		0
-VAR_SS_Z			DCB		0
-VAR_SS_E			DCB		0
-VAR_NN_Z			DCB		0
-VAR_NN_E			DCB		0
+VAR_MM_Z            DCB     0 														; Minuten Zehner
+VAR_MM_E            DCB     0 														; Minuten Einer
+VAR_SS_Z            DCB     0 														; Sekunden Zehner
+VAR_SS_E            DCB     0 														; Sekunden Einer
+VAR_NN_Z            DCB     0 														; Hundertstel Zehner
+VAR_NN_E            DCB     0														; Hundertstel Einer
 
-	; Variablen für Woche 2: 
+	; --- Variablen für Woche 2 --- 
+STATE				DCD		STATUS_INIT												; Aktueller Zustand 
+TIMEDIFFERENCE		DCD		0														; Gestoppte Zeitspanne in Ticks
+LAST_TICK			DCD		0														; Zeitstempel beim letzten Durchlauf	
 
-STATE				DCD		STATE_INIT		; aktueller Zustand der Finite State Machine (FSM) 
-STOPZEIT			DCD		0				; gestoppte Zeitspanne in Ticks
-LAST_TICK			DCD		0				; Zeitstempel beim letzten Aufruf	
 ;********************************************
 ; Datensegment (8-Byte Grenze)
 ;********************************************
-	AREA |.text|, CODE, READONLY, ALIGN = 3
-
+	AREA |.text|, CODE, READONLY, ALIGN = 4
 
 ;--------------------------------------------
 ; main subroutine
@@ -113,33 +98,35 @@ main	PROC
 
 		ldr   	r1, =DEFAULT_BRIGHTNESS
 		ldrh 	r0, [r1]
-		bl   	GUI_init
+		bl   	GUI_init															
 
 		bl  	initTimer
 
-		ldr 	R1,=TIM2_PSC   			; Set pre scaler such that 1 timer tick represents 10 us
+		ldr 	R1,=TIM2_PSC   														; Timer-Teiler setzen, damit 1 Tick = 10 µs entspricht
 		mov 	R0,#(90*10-1) 
 		strh	R0,[R1]
 
-		ldr 	R1,=TIM2_ERG   			; Restart timer	
+		ldr 	R1,=TIM2_ERG   														; Timer	neu starten
 		mov		R0,#0x01
-		strh	R0,[R1]					; Set UG Bit
+		strh	R0,[R1]																
 
 		mov 	R0, #24
 		bl  	lcdSetFont
 
-		; Ihre Initialisierung
-		ldr		R1, = STATE
-		mov		R0, #STATUS_INIT
-		strb	R0, [R1]
-		
+		bl		initDisplay
+
+		; --- LEDs D8 und D9 ausschalten ---
+		mov     R3, #(LED_D8 :OR: LED_D9)	
+		ldr		R1,=GPIO_D_CLR
+		strh	R3, [R1]															; Bits in CLR-Register schreiben schaltet LEDs aus
+
 	 	bl 		UpdateClk
 
 ;--------------------------------------------
 ; Hauptschleife: superloop
 ;--------------------------------------------
 superloop
-		bl		UpdateClk				
+		bl		UpdateClk															; Zeitspanne seit letztem Aufruf berechnen	
 
 		ldr		R1, =STATE
 		ldr		R2, [R1]				
@@ -153,17 +140,183 @@ superloop
 		cmp		R2, #STATUS_INIT
 		beq		do_init				
 
-		bal		superloop
+		bal		superloop	
+do_init
+		bl		init
+		bal		superloop	
 do_run
 		bl		run
 		bal		superloop
 do_hold
 		bl		hold
-		bal		superloop
-do_init
-		bl		init
-		bal		superloop		
+		bal		superloop															
 
+		ENDP
+
+;--------------------------------------------
+; Unterprogramm: initDisplay
+;--------------------------------------------
+initDisplay PROC
+
+		push	{lr}																; Rücksprungadresse retten			
+		mov		R0, #0																; X-Position 0
+		mov		R1, #0																; Y-Position 0		
+		bl		lcdGotoXY															; Cursor oben links
+		ldr 	R0, =TITEL_TEXT
+		bl 		lcdPrintS															; Titel ausgeben
+
+		mov		R0, #0												
+		mov		R1, #1																; Zeile 1
+
+		bl		lcdGotoXY
+		ldr		R0, =TIMER_TEXT
+		bl 		lcdPrintS															; Startzeit ausgeben
+
+		pop 	{lr}																; Rücksprung
+		bx		lr
+		ENDP
+		
+;--------------------------------------------
+; Unterprogramm: readButtons
+;--------------------------------------------
+readButtons PROC
+        push    {lr}
+        ldr     R0,=GPIO_F_PIN														; Taster-Status lesen
+        ldrh    R0,[R0]
+
+        ldr     R2, =STATE															; Aktuellen Status laden
+        ldrh    R1, [R2]
+
+testS5
+        AND     R3, R0, #button_S5
+        cmp     R3, #0
+        bne     testS6																; Wenn Bit gesetzt (nicht gedrückt), zum nächsten
+        mov     R1, #STATUS_INIT
+        strh    R1,[R2]																; Zustand auf INIT setzen
+        BAL     readButtons_ende
+
+testS6
+        AND     R3, R0, #button_S6
+        CMP     R3, #0
+        bne     testS7
+        CMP     R1, #STATUS_RUN
+        bne     testS7																; Wenn Bit gesetzt (nicht gedrückt), zum nächsten
+        mov     R1, #STATUS_HOLD
+        strh    R1,[R2]																; Zustand auf HOLD setzen
+        BAL     readButtons_ende
+
+testS7
+        AND     R3, R0, #button_S7
+        CMP     R3, #0
+        bne     readButtons_ende
+        CMP     R1, #STATUS_RUN
+        beq     readButtons_ende
+        mov     R1, #STATUS_RUN
+        strh    R1,[R2]																; Zustand auf RUN setzen
+
+readButtons_ende
+        pop     {PC}
+        ENDP
+
+;--------------------------------------------
+; Unterprogramm: displayZeit
+;--------------------------------------------		
+displayZeit PROC
+
+		push	{lr}
+		
+		;--- 10 Minuten = 60 000 000 Ticks ---
+		ldr		R1, = 60000000
+		udiv	R2, R0, R1															; R2 = Zehner-Stelle der Minuten
+		mls		R0, R2, R1, R0														; R0 = Rest (verbleibende Ticks)
+		ldr 	R3, =VAR_MM_Z
+		strb	R2, [R3]
+
+		;-- 1 Minute = 6 000 000 Ticks ---
+		ldr		R1, = 6000000
+		udiv	R2, R0, R1															; R2 = Einer-Stelle der Minuten
+		mls		R0, R2, R1, R0														; R0 = Rest
+		ldr 	R3, =VAR_MM_E
+		strb	R2, [R3]
+
+		;---10 Sekunden = 1 000 000 Ticks ---
+		ldr		R1, = 1000000
+		udiv	R2, R0, R1															; R2 = Zehner-Stelle der Sekunden
+		mls		R0, R2, R1, R0														; R0 = Rest
+		ldr 	R3, =VAR_SS_Z
+		strb	R2, [R3]
+
+		;--- 1 Sekunde = 100 000 Ticks ---
+		ldr		R1, = 100000
+		udiv	R2, R0, R1															; R2 = Einer-Stelle der Sekunden
+		mls		R0, R2, R1, R0														; R0 = Rest (< 100 000 Ticks = < 1 Sekunde)
+		ldr 	R3, =VAR_SS_E
+		strb	R2, [R3]
+
+		;--- Hundertstel (nn): Rest in 10ms-Schritte umrechnen ---
+		ldr		R1, = 1000
+		udiv	R2, R0, R1															; R2 = nn gesamt (0-99)
+		;Ziffernteiler
+		mov		R1, #10
+		udiv	R3, R2, R1															; R3 = nn / 10 (Zehner)
+		mls		R2, R3, R1, R2														; R2 = nn mod 10 (Einer)
+		ldr 	R1, =VAR_NN_Z
+		strb	R3, [R1]
+		ldr 	R1, =VAR_NN_E
+		strb	R2, [R1]
+
+;--------------------------------------------
+; Displayausgabe  
+;--------------------------------------------
+		;--- Minutenausgabe ---
+		mov		R0, #0
+		mov 	R1, #1
+		bl 		lcdGotoXY
+
+		ldr		R0, =VAR_MM_Z
+		ldrb	R0, [R0]
+		add		R0, R0, #'0'
+		bl 		lcdPrintC
+
+		ldr		R0, =VAR_MM_E
+		ldrb	R0, [R0]
+		add		R0, R0, #'0'
+		bl 		lcdPrintC
+
+		;--- Trennzeichen ':' ---
+
+		mov		R0, #':'
+		bl		lcdPrintC
+
+		;--- Sekundenausgabe ---
+		ldr		R0, =VAR_SS_Z
+		ldrb	R0, [R0]
+		add		R0, R0, #'0'
+		bl 		lcdPrintC
+
+		ldr		R0, =VAR_SS_E
+		ldrb	R0, [R0]
+		add		R0, R0, #'0'
+		bl 		lcdPrintC
+
+		;--- Trennzeichen '.' ---
+
+		mov		R0, #'.'
+		bl		lcdPrintC
+
+		;--- Nanosekundeausgabe ---
+		ldr		R0, =VAR_NN_Z
+		ldrb	R0, [R0]
+		add		R0, R0, #'0'
+		bl 		lcdPrintC
+
+		ldr		R0, =VAR_NN_E
+		ldrb	R0, [R0]
+		add		R0, R0, #'0'
+		bl 		lcdPrintC
+
+		pop		{lr}
+		bx		lr
 		ENDP
 
 ;--------------------------------------------
@@ -172,61 +325,49 @@ do_init
 UpdateClk	PROC
 		push	{lr}
 
-		ldr		R1, =TIMER
+		ldr		R1, =TIMER															; Aktuellen Timer-Wert laden
 		ldr		R2, [R1]
 
-		ldr		R1, =LAST_TICK
+		ldr		R1, =LAST_TICK														; Alten Zeitstempel laden
 		ldr 	R3, [R1]
 
-		sub		R0, R2, R3
-		str		R2, [R1]
+		sub		R0, R2, R3															; Differenz berechnen
+		str		R2, [R1]															; Aktuellen Timer als neuen "Letzten" speichern
 
 		pop		{lr}
 		bx		lr
 		ENDP
-
+		
 ;--------------------------------------------
-; Unterprogramm: readButtons
+; Unterprogramm: init
 ;--------------------------------------------
-readButtons PROC
-        push    {lr}
-        ldr        R0,=GPIO_F_PIN
-        ldrh    R0,[R0]
+init	PROC
+		push {lr}
 
-        ldr        R2, =State
-        ldrh    R1, [R2]
+		; Zeit auf 0 zurücksetzen
+		ldr		R1, =TIMEDIFFERENCE		
+		mov		R2, #0
+		str		R2, [R1]
+		mov		R0, #0
+		bl		displayZeit
 
-testS5
-        AND        R3, R0, #button_S5
-        cmp        R3, #0
-        bne     testS6
-        mov        R1, #STATUS_INIT
-        strh    R1,[R2]
-        BAL        readButtons_ende
+		; LEDs ausschalten
+		ldr		R1, =GPIO_D_CLR
+		mov		R0, #(LED_D8 :OR: LED_D9)
+		strh	R0, [R1]
 
-testS6
-        AND        R3, R0, #button_S6
-        CMP        R3, #0
-        bne        testS7
-        CMP        R1, #STATUS_RUN
-        bne        testS7
-        mov        R1, #STATUS_HOLD
-        strh    R1,[R2]
-        BAL        readButtons_ende
+		; Prüfen ob S7 gedrückt, dann direkt in RUN	
+		bl		readButtons
+		tst		R0, #button_S7
+		bne		init_ende
+		ldr		R1, =STATE
+		mov		R2, #STATUS_RUN
+		str		R2, [R1]
 
-testS7
-        AND        R3, R0, #button_S7
-        CMP        R3, #0
-        bne        readButtons_ende
-        CMP        R1, #STATUS_RUN
-        beq     readButtons_ende
-        mov     R1, #STATUS_RUN
-        strh    R1,[R2]
-
-readButtons_ende
-        pop        {PC}
-
-        ENDP
+init_ende
+		pop		{lr}
+		bx		lr
+		ENDP
 
 ;--------------------------------------------
 ; Unterprogramm: run
@@ -234,14 +375,17 @@ readButtons_ende
 run		PROC
 		push	{lr}
 
-		ldr		R1, =STOPZEIT
+		; Zeit aufaddieren
+		ldr		R1, =TIMEDIFFERENCE
 		ldr		R2, [R1]
 		add		R2, R2, R0
 		str		R2, [R1]
 
+		; Zeit anzeigen
 		mov		R0, R2
 		bl		displayZeit
 
+		; LED D8 an, D9 aus
 		ldr		R1, =GPIO_D_SET
 		mov		R0, #LED_D8
 		strh	R0, [R1]
@@ -275,11 +419,13 @@ run_ende
 hold 	PROC
 		push	{lr}
 
-		ldr		R1, =STOPZEIT
+		; Zeit weiterzählen (aber nicht ausgeben)
+		ldr		R1, =TIMEDIFFERENCE
 		ldr		R2, [R1]
 		add		R2, R2, R0
 		str		R2, [R1]
 
+		; LEDs D8 und D9 an
 		ldr		R1, =GPIO_D_SET
 		mov		R0, #(LED_D8 :OR: LED_D9)
 		strh	R0, [R1]
@@ -304,180 +450,5 @@ hold_ende
 		bx		lr
 		ENDP
 
-;--------------------------------------------
-; Unterprogramm: init
-;--------------------------------------------
-init	PROC
-		push {lr}
-
-		ldr		R1, STOPZEIT
-		mov		R2, #0
-		str		R2, [R1]
-		mov		R0, #0
-		bl		displayZeit
-
-		ldr		R1, =GPIO_D_CLR
-		mov		R0, #(LED_D8 :OR: LED_D9)
-		strh	R0, [R1]
-
-		bl		readButtons
-		tst		R0, #button_S7
-		bne		init_ende
-		ldr		R1, =STATE
-		mov		R2, #STATUS_RUN
-		str		R2, [R1]
-
-init_ende
-		pop		{lr}
-		bx		lr
-		ENDP
-
-
-
-
-initDisplay PROC
-
-		push	{lr}
-		mov		R0, #0
-		mov		R1, #0
-
-		bl		lcdGotoXY
-		ldr 	R0, =TEXT_TITEL
-		bl 		lcdPrintS
-
-		mov		R0, #0
-		mov		R1, #1
-
-		bl		lcdGotoXY
-		ldr		R0, =TEXT_START
-		bl 		lcdPrintS
-
-		pop 	{lr}
-		bx		lr
-		ENDP
-
-		
-displayZeit PROC
-
-		push	{lr}
-
-		;------- Minuten (mm)-------
-
-		;--Minuten gesamt--
-		ldr		R1, =TICK_PRO_MINUTE
-		udiv	R2, R0, R1					; R2 = Ticks / 60 000 000 ohne Rest
-
-		; mm = mm gesamt mod 60
-		mov		R3, #60
-		udiv	R1, R2, R3					; R1 = R2 / 60
-		mls		R2, R1, R3, R2				; R2 = mm (0-59)
-
-		;Ziffernteiler
-		mov		R3, #10
-		udiv	R1, R2, R3					; R1 = mm / 10 (Zehner)
-		mls		R3, R1, R3, R2				; R3 = mm mod 10 (Einer) --> R3 Neuer Wert
-
-		ldr 	R2, =VAR_MM_Z
-		strb	R1, [R2]
-		ldr 	R2, =VAR_MM_E
-		strb	R3, [R2]
-
-		;------- Sekunden (ss)-------
-
-		;--Sekunden gesamt--
-		ldr		R1, =TICK_PRO_SEKUNDE
-		udiv	R2, R0, R1					; R2 = Ticks / 100000 ohne Rest
-
-		; ss = ss gesamt mod 60
-		mov		R3, #60
-		udiv	R1, R2, R3					; R1 = R2 / 60
-		mls		R2, R1, R3, R2				; R2 = ss (0-59)
-
-		;Ziffernteiler
-		mov		R3, #10
-		udiv	R1, R2, R3					; R1 = ss / 10 (Zehner)
-		mls		R3, R1, R3, R2				; R3 = ss mod 10 (Einer) --> R3 Neuer Wert
-
-		ldr 	R2, =VAR_SS_Z
-		strb	R1, [R2]
-		ldr 	R2, =VAR_SS_E
-		strb	R3, [R2]
-
-		;------- Nanosekunde (nn)-------
-
-		;--Nanosekunde gesamt--
-		ldr		R1, =TICK_PRO_NANO
-		udiv	R2, R0, R1					; R2 = Ticks / 1000 ohne Rest
-
-		; nn = nn gesamt mod 100
-		mov		R3, #100
-		udiv	R1, R2, R3					; R1 = R2 / 100
-		mls		R2, R1, R3, R2				; R2 = nn (0-99)
-
-		;Ziffernteiler
-		mov		R3, #10
-		udiv	R1, R2, R3					; R1 = nn / 10 (Zehner)
-		mls		R3, R1, R3, R2				; R3 = nn mod 10 (Einer) --> R3 Neuer Wert
-
-		ldr 	R2, =VAR_NN_Z
-		strb	R1, [R2]
-		ldr 	R2, =VAR_NN_E
-		strb	R3, [R2]
-
-		; Alle Werte liegen im RAM desshalb darf R0 überschrieben werden mit BL-Aufrufe
-
-
-		; Minuten
-		mov		R0, #0
-		mov 	R1, #1
-		bl 		lcdGotoXY
-
-		ldr		R0, =VAR_MM_Z
-		ldrb	R0, [R0]
-		add		R0, R0, #'0'
-		bl 		lcdPrintC
-
-		ldr		R0, =VAR_MM_E
-		ldrb	R0, [R0]
-		add		R0, R0, #'0'
-		bl 		lcdPrintC
-
-		; Trennzeichen ';'
-
-		mov		R0, #';'
-		bl		lcdPrintC
-
-		;Sekunden
-		ldr		R0, =VAR_SS_Z
-		ldrb	R0, [R0]
-		add		R0, R0, #'0'
-		bl 		lcdPrintC
-
-		ldr		R0, =VAR_SS_E
-		ldrb	R0, [R0]
-		add		R0, R0, #'0'
-		bl 		lcdPrintC
-
-		; Trennzeichen ';'
-
-		mov		R0, #';'
-		bl		lcdPrintC
-
-		;Nanosekunde
-		ldr		R0, =VAR_NN_Z
-		ldrb	R0, [R0]
-		add		R0, R0, #'0'
-		bl 		lcdPrintC
-
-		ldr		R0, =VAR_NN_E
-		ldrb	R0, [R0]
-		add		R0, R0, #'0'
-		bl 		lcdPrintC
-
-		pop		{lr}
-		bx		lr
-		ENDP
-
 		ALIGN
 		END
-
