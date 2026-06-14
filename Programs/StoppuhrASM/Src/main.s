@@ -36,9 +36,6 @@ TIM2_ERG			equ (TIM2_BASE + 0x14)   ; Timerneustart
 ; Bitmasken für LEDs und Buttons  
 ;********************************************
 
-; änderungen nötig
-
-
 STATUS_INIT			equ 0	
 STATUS_RUN			equ 1
 STATUS_HOLD			equ 2
@@ -48,22 +45,14 @@ STATUS_HOLD			equ 2
 ; Bitmasken für LEDs, Bit 0 = D8, Bit 1 = D9 und Buttons, Bit=0 --> Taster Gedrückt   
 ;********************************************
 
-; änderungen nötig
+
 
 LED_D8				equ (1 << 1)    		; Zeitmessung aktiv
 LED_D9              equ (1 << 2)    		; Hold aktiv
 
-button_S5			equ (1 << 5)    		; Reset -> INIT
-button_S6			equ (1 << 6)			; Stop  -> HOLD
-button_S7			equ (1 << 7)			; Start -> RUN
-
-;********************************************
-; Zeitkonstanten mm:ss:nn (Tick = 1 Mikrosekunde) 
-;********************************************
-
-TICK_PRO_NANO		equ 1000
-TICK_PRO_SEKUNDE	equ 100000	
-TICK_PRO_MINUTE		equ 6000000				; 1min = 60s, 1s = 100 Nanosekunden, 1 Nanosekunde = 1000 Ticks  
+button_S5			equ	0xDF    		; Reset -> INIT
+button_S6			equ 0xBF			; Stop  -> HOLD
+button_S7			equ 0x7F			; Start -> RUN
 
 ;********************************************
 ; Externe Funktionen  
@@ -86,10 +75,12 @@ TICK_PRO_MINUTE		equ 6000000				; 1min = 60s, 1s = 100 Nanosekunden, 1 Nanosekun
 	AREA MyData, DATA, align = 2
 
 DEFAULT_BRIGHTNESS	DCW     800
-MY_TEXT				DCB		"Hold down different buttons from S0 to S7 and watch D8 to D15.", 0
 
-TEXT_START			DCB		"00:00:00", 0
+TIMER_TEXT			DCB		"00:00:00", 0
 TEXT_TITEL			DCB		"-- Stoppuhr --", 0
+ZEIT				DCB		"00:00:00", 0
+
+
 
 VAR_MM_Z			DCB		0
 VAR_MM_E			DCB		0
@@ -98,19 +89,30 @@ VAR_SS_E			DCB		0
 VAR_NN_Z			DCB		0
 VAR_NN_E			DCB		0
 
-	; Variablen für Woche 2: 
 
-STATE				DCD		STATE_INIT		; aktueller Zustand der Finite State Machine (FSM) 
-STOPZEIT			DCD		0				: gestoppte Zeitspanne in Ticks
+
+
+	; Variablen für Woche 2: 
+STATE				DCD		STATUS_INIT		; aktueller Zustand der Finite State Machine (FSM) 
+ZEITDIFFERENZ		DCD		0				: gestoppte Zeitspanne in Ticks
+
+
+
 ;********************************************
 ; Datensegment (8-Byte Grenze)
 ;********************************************
 	AREA |.text|, CODE, READONLY, ALIGN = 3
 
 
+
+
 ;--------------------------------------------
 ; main subroutine
 ;--------------------------------------------
+
+
+
+
 	EXPORT main [CODE]
 	
 main	PROC
@@ -147,7 +149,7 @@ main	PROC
 ;--------------------------------------------
 superloop
 		BL		UpdateClk				
-
+		BL 		readButtons
 		LDR		R1, =STATE
 		LDR		R2, [R1]				
 
@@ -179,11 +181,42 @@ do_init
 
 readButtons PROC
 		push	{lr}
-		LDR		R0,=GPIO_F_PIN
+		ldr		R0,=GPIO_F_PIN
 		ldrh	R0,[R0]
-		and		R0,#0xFF 
-		pop		{lr}
-		bx 		lr
+
+		ldr		R2, =State
+		ldrh	R1, [R2]
+
+testS5
+		AND		R3, R0, #button_S5
+		cmp		R3, #0
+		bne 	testS6
+		mov		R1, #STATUS_INIT
+		strh	R1,[R2]
+		BAL		readButtons_ende
+
+testS6
+		AND		R3, R0, #button_S6
+		CMP		R3, #0
+		bne		testS7
+		CMP		R1, #STATUS_RUN
+		bne		testS7
+		mov		R1, #STATUS_HOLD
+		strh	R1,[R2]
+		BAL		readButtons_ende
+	
+testS7
+		AND		R3, R0, #button_S7
+		CMP		R3, #0
+		bne		readButtons_ende
+		CMP		R1, #STATUS_RUN
+		beq 	readButtons_ende
+		mov 	R1, #STATUS_RUN
+		strh	R1,[R2]
+
+readButtons_ende
+		pop		{PC}
+
 		ENDP
 
 		
@@ -232,35 +265,18 @@ run_ende
 ; Unterprogramm: hold
 ;--------------------------------------------
 
+zeitRechnung PROC
+		PUSH 	{R4,R5,R6,R7,lr}
+		
+		ldr		R1, LAST_TICK
+		ldr		R4,[R1]
+
+		ldr 	R5, =TIMER_TEXT
 
 
 
 
 
-test_b6
-
-		tst		R0, #button_S6
-		bne 	test_b7
-		LDR		R1,=GPIO_D_SET
-		mov		R0, #3
-		strh	R0, [R1]
-		b		superloop_ende
-
-
-test_b7
-
-		tst		R0, #button_S7
-		bne 	superloop_ende
-		LDR		R1,=GPIO_D_CLR
-		mov		R0, #LED_D9
-		strh	R0, [R1]
-		LDR		R1,=GPIO_D_CLR
-		mov		R0, #LED_D8
-		strh	R0, [R1]
-
-superloop_ende
-		BAL		superloop				; End of superloop
-		ENDP
 initDisplay PROC
 
 		push	{lr}
@@ -282,127 +298,6 @@ initDisplay PROC
 		bx		lr
 		ENDP
 
-		
-displayZeit PROC
-
-		push	{lr}
-
-		;------- Minuten (mm)-------
-
-		;--Minuten gesamt--
-		ldr		R1, =TICK_PRO_MINUTE
-		udiv	R2, R0, R1					; R2 = Ticks / 60 000 000 ohne Rest
-
-		; mm = mm gesamt mod 60
-		mov		R3, #60
-		udiv	R1, R2, R3					; R1 = R2 / 60
-		mls		R2, R1, R3, R2				; R2 = mm (0-59)
-
-		;Ziffernteiler
-		mov		R3, #10
-		udiv	R1, R2, R3					; R1 = mm / 10 (Zehner)
-		mls		R3, R1, R3, R2				; R3 = mm mod 10 (Einer) --> R3 Neuer Wert
-
-		ldr 	R2, =VAR_MM_Z
-		strb	R1, [R2]
-		ldr 	R2, =VAR_MM_E
-		strb	R3, [R2]
-
-		;------- Sekunden (ss)-------
-
-		;--Sekunden gesamt--
-		ldr		R1, =TICK_PRO_SEKUNDE
-		udiv	R2, R0, R1					; R2 = Ticks / 100000 ohne Rest
-
-		; ss = ss gesamt mod 60
-		mov		R3, #60
-		udiv	R1, R2, R3					; R1 = R2 / 60
-		mls		R2, R1, R3, R2				; R2 = ss (0-59)
-
-		;Ziffernteiler
-		mov		R3, #10
-		udiv	R1, R2, R3					; R1 = ss / 10 (Zehner)
-		mls		R3, R1, R3, R2				; R3 = ss mod 10 (Einer) --> R3 Neuer Wert
-
-		ldr 	R2, =VAR_SS_Z
-		strb	R1, [R2]
-		ldr 	R2, =VAR_SS_E
-		strb	R3, [R2]
-
-		;------- Nanosekunde (nn)-------
-
-		;--Nanosekunde gesamt--
-		ldr		R1, =TICK_PRO_NANO
-		udiv	R2, R0, R1					; R2 = Ticks / 1000 ohne Rest
-
-		; nn = nn gesamt mod 100
-		mov		R3, #100
-		udiv	R1, R2, R3					; R1 = R2 / 100
-		mls		R2, R1, R3, R2				; R2 = nn (0-99)
-
-		;Ziffernteiler
-		mov		R3, #10
-		udiv	R1, R2, R3					; R1 = nn / 10 (Zehner)
-		mls		R3, R1, R3, R2				; R3 = nn mod 10 (Einer) --> R3 Neuer Wert
-
-		ldr 	R2, =VAR_NN_Z
-		strb	R1, [R2]
-		ldr 	R2, =VAR_NN_E
-		strb	R3, [R2]
-
-		; Alle Werte liegen im RAM desshalb darf R0 überschrieben werden mit BL-Aufrufe
-
-
-		; Minuten
-		mov		R0, #0
-		mov 	R1, #1
-		bl 		lcdGotoXY
-
-		ldr		R0, =VAR_MM_Z
-		ldrb	R0, [R0]
-		add		R0, R0, #'0'
-		bl 		lcdPrintC
-
-		ldr		R0, =VAR_MM_E
-		ldrb	R0, [R0]
-		add		R0, R0, #'0'
-		bl 		lcdPrintC
-
-		; Trennzeichen ';'
-
-		mov		R0, #';'
-		bl		lcdPrintC
-
-		;Sekunden
-		ldr		R0, =VAR_SS_Z
-		ldrb	R0, [R0]
-		add		R0, R0, #'0'
-		bl 		lcdPrintC
-
-		ldr		R0, =VAR_SS_E
-		ldrb	R0, [R0]
-		add		R0, R0, #'0'
-		bl 		lcdPrintC
-
-		; Trennzeichen ';'
-
-		mov		R0, #';'
-		bl		lcdPrintC
-
-		;Nanosekunde
-		ldr		R0, =VAR_NN_Z
-		ldrb	R0, [R0]
-		add		R0, R0, #'0'
-		bl 		lcdPrintC
-
-		ldr		R0, =VAR_NN_E
-		ldrb	R0, [R0]
-		add		R0, R0, #'0'
-		bl 		lcdPrintC
-
-		pop		{lr}
-		bx		lr
-		ENDP
 
 		ALIGN
 		END

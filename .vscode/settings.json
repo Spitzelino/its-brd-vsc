@@ -117,7 +117,7 @@
   "cmake.ignoreCMakeListsMissing": true,
   "C_Cpp_Runner.msvcBatchPath": "",
   "clangd.arguments": [
-    "--compile-commands-dir=c:\\Users\\DuyTrinh\\Desktop\\GitProjekte\\its-brd-vsc-1\\Programs\\StoppuhrASM\\out\\StoppuhrASM\\ITSboard_Assembly\\Debug"
+    "--compile-commands-dir=c:\\Users\\jankl\\OneDrive\\Desktop\\uni\\gitProjekte\\its-brd-vsc\\Programs\\StoppuhrASM\\out\\StoppuhrASM\\ITSboard_Assembly\\Debug"
   ],
   "debug.hideSlowPreLaunchWarning": true,
   "debug.showInStatusBar": "never",

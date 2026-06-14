@@ -1,5 +1,7 @@
 CompileFlags:
-  CompilationDatabase: c:\Users\DuyTrinh\Desktop\GitProjekte\its-brd-vsc-1\Programs\StoppuhrASM\out\StoppuhrASM\ITSboard_Assembly\Debug
+  CompilationDatabase: >-
+    c:\Users\jankl\OneDrive\Desktop\uni\gitProjekte\its-brd-vsc\Programs\StoppuhrASM\out\StoppuhrASM\ITSboard_Assembly\Debug
   Add:
-    - -include
-    - c:\Users\DuyTrinh\Desktop\GitProjekte\its-brd-vsc-1\Programs\StoppuhrASM\out\StoppuhrASM\ITSboard_Assembly\Debug\compile_macros.h
+  - '-include'
+  - >-
+    c:\Users\DuyTrinh\Desktop\GitProjekte\its-brd-vsc-1\Programs\StoppuhrASM\out\StoppuhrASM\ITSboard_Assembly\Debug\compile_macros.h
