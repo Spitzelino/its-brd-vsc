@@ -5,9 +5,9 @@
 ;* Date               : 11.05.2022
 ;* Description        : Rahmen zur Loesung von GTP Woche 7-9 (Stoppuhr).
 ;* 
-;*Team:                                        *
-;*   Xuan Hoang Duy Trinh Matrikel-Nr. 2881544  *
-;*   Jan Klindtworth      Matrikel-Nr. 2884053  *
+;* Team               : Jan Klindtworth      	Matrikel-Nr. 2884053                                        
+;*						Xuan Hoang Duy Trinh 	Matrikel-Nr. 2881544 
+;*   
 ;*******************************************************************************
 
 ;********************************************
@@ -50,12 +50,12 @@ STATUS_HOLD			equ 2
 
 ; änderungen nötig
 
-LED_D8				equ (1 << 1)    ; Zeitmessung aktiv
-LED_D9              equ (1 << 2)    ; Hold aktiv
+LED_D8				equ (1 << 1)    		; Zeitmessung aktiv
+LED_D9              equ (1 << 2)    		; Hold aktiv
 
-button_S5			equ (1 << 5)    ; Reset -> INIT
-button_S6			equ (1 << 6)	; Stop  -> HOLD
-button_S7			equ (1 << 7)	; Start -> RUN
+button_S5			equ (1 << 5)    		; Reset -> INIT
+button_S6			equ (1 << 6)			; Stop  -> HOLD
+button_S7			equ (1 << 7)			; Start -> RUN
 
 ;********************************************
 ; Zeitkonstanten mm:ss:nn (Tick = 1 Mikrosekunde) 
@@ -63,7 +63,7 @@ button_S7			equ (1 << 7)	; Start -> RUN
 
 TICK_PRO_NANO		equ 1000
 TICK_PRO_SEKUNDE	equ 100000	
-TICK_PRO_MINUTE		equ 6000000		; 1min = 60s, 1s = 100 Nanosekunden, 1 Nanosekunde = 1000 Ticks  
+TICK_PRO_MINUTE		equ 6000000				; 1min = 60s, 1s = 100 Nanosekunden, 1 Nanosekunde = 1000 Ticks  
 
 ;********************************************
 ; Externe Funktionen  
@@ -98,6 +98,10 @@ VAR_SS_E			DCB		0
 VAR_NN_Z			DCB		0
 VAR_NN_E			DCB		0
 
+	; Variablen für Woche 2: 
+
+STATE				DCD		STATE_INIT		; aktueller Zustand der Finite State Machine (FSM) 
+STOPZEIT			DCD		0				: gestoppte Zeitspanne in Ticks
 ;********************************************
 ; Datensegment (8-Byte Grenze)
 ;********************************************
@@ -132,46 +136,106 @@ main	PROC
 		bl  	lcdSetFont
 
 		; Ihre Initialisierung
+		LDR		R1, = STATE
+		MOV		R0, #STATUS_INIT
+		strb	R0, [R1]
 		
+	 	;BL 		UpdateClk
 
-		bl		initDisplay
+;--------------------------------------------
+; Hauptschleife: superloop
+;--------------------------------------------
+superloop
+		BL		UpdateClk				
 
-		ldr		R1, =GPIO_D_CLR
-		mov		R0, #3
-		strh 	R0, [R1]
+		LDR		R1, =STATE
+		LDR		R2, [R1]				
 
-		ldr 	R1, =GPIO_D_SET
+		CMP		R2, #STATUS_RUN
+		BEQ		do_run
+
+		CMP		R2, #STATUS_HOLD
+		BEQ		do_hold
+
+		CMP		R2, #STATUS_INIT
+		BEQ		do_init				
+
+		BAL		superloop
+do_run
+		BL		run
+		BAL		superloop
+do_hold
+		BL		hold
+		BAL		superloop
+do_init
+		BL		init
+		BAL		superloop		
+
+		ENDP
+
+;--------------------------------------------
+; Unterprogramm: readButtons
+;--------------------------------------------
+
+readButtons PROC
+		push	{lr}
+		LDR		R0,=GPIO_F_PIN
+		ldrh	R0,[R0]
+		and		R0,#0xFF 
+		pop		{lr}
+		bx 		lr
+		ENDP
+
+		
+;--------------------------------------------
+; Unterprogramm: run
+;--------------------------------------------
+run		PROC
+		push	{lr}
+
+		LDR		R1, =STOPZEIT
+		LDR		R2, [R1]
+		ADD		R2, R2, R0
+		STR		R2, [R1]
+
+		MOV		R0, R2
+		BL		displayZeit
+
+		LDR		R1, =GPIO_D_SET
 		mov		R0, #LED_D8
 		strh	R0, [R1]
-		mov		R0, #400
-		bl		Delay
-
-		ldr 	R1, =GPIO_D_SET
+		LDR		R1, =GPIO_D_CLR
 		mov		R0, #LED_D9
 		strh	R0, [R1]
-		mov		R0, #400
-		bl		Delay
 
-		LDR     R1, =GPIO_D_CLR
-    	MOV     R0, #3
-   		STRH    R0, [R1]
+		bl		readButtons
+		tst		R0, #button_S6
+		bne		run_check_s5			
+		LDR		R1, =STATE
+		MOV		R2, #STATUS_HOLD
+		STR		R2, [R1]
+		B		run_ende
 
-
-		MOV     R0, #0
-    	BL      displayZeit
-		; Simple test code
-		LDR 	R0,=MY_TEXT
-		BL  	lcdPrintS
-
-superloop
-		bl readButtons
-
+run_check_s5
 		tst		R0, #button_S5
-		bne		test_b6
-		LDR		R1,=GPIO_D_SET
-		mov		R0, #3
-		strh	R0, [R1]
-		b		superloop_ende
+		bne		run_ende				
+		LDR		R1, =STATE
+		MOV		R2, #STATUS_INIT
+		STR		R2, [R1]
+
+run_ende
+		pop		{lr}
+		bx		lr
+		ENDP
+
+;--------------------------------------------
+; Unterprogramm: hold
+;--------------------------------------------
+
+
+
+
+
 
 test_b6
 
@@ -217,14 +281,7 @@ initDisplay PROC
 		pop 	{lr}
 		bx		lr
 		ENDP
-readButtons PROC
-		push	{lr}
-		LDR		R0,=GPIO_F_PIN
-		ldrh	R0,[R0]
-		and		R0,#0xFF 
-		pop		{lr}
-		bx 		lr
-		ENDP
+
 		
 displayZeit PROC
 
@@ -234,7 +291,7 @@ displayZeit PROC
 
 		;--Minuten gesamt--
 		ldr		R1, =TICK_PRO_MINUTE
-		udiv	R2, R0, R1					; R2 = Ticks / 60000000 ohne Rest
+		udiv	R2, R0, R1					; R2 = Ticks / 60 000 000 ohne Rest
 
 		; mm = mm gesamt mod 60
 		mov		R3, #60

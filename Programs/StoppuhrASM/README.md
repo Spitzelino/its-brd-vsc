@@ -5,7 +5,7 @@
 
 
     Ziel:       
-    Programmierung einer Stoppuhr auf dem ITS-Board in ARM-Assembler. Die Zeit wird im Format mm:ss:nn auf dem TFT-Display angezeigt mit einer Auflösung von 1/100 von Sekunden. Die Steurung erfolgt über drei Taster (S5, S6 & S7) und der Betriebszustand wird über zwei LEDs (D8, D9) visualisiert. 
+    Programmierung einer Stoppuhr auf dem ITS-Board in ARM-Assembler. Die Zeit wird im Format mm:ss.nn auf dem TFT-Display angezeigt mit einer Auflösung von 1/100 von Sekunden. Die Steurung erfolgt über drei Taster (S5, S6 & S7) und der Betriebszustand wird über zwei LEDs (D8, D9) visualisiert. 
 
 
     Zustandautomaten:
@@ -18,10 +18,15 @@
 
         Zustand    |    D8    |     D9     |     Beschreibung    
     ---------------|----------|------------|----------------------------------------------------------------------------------------------
-         INIT      |   aus    |    aus     |     Zeit auf 00:00:00 gesetzt
+         INIT      |   aus    |    aus     |     Zeit auf 00:00.00 gesetzt
          RUN       |   an     |    aus     |     Zeit läuft und Display wird aktualierst   
          HOLD      |   an     |    an      |     Anzeige stoppt, aber im Hintergrund wird weiter gezählt
 
     Assembler - Unterprogamm: 
 
-
+        Funktion           |         Ausgabe                       
+    -----------------------|---------------------------------------------------------------------------------------------------------------
+        initDisplay        |         Titel und Startzeit auf TFT ausgeben
+        readButtons        |         GPIO_F_PIN lesen, Rückgabe in R0 (Bit=0 → gedrückt)
+        displayZeit        |         Zeitwert (Ticks) in mm:ss.nn umrechnen und auf TFT ausgeben
+    
