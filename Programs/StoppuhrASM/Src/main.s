@@ -3,7 +3,7 @@
 ;* Author             : Franz Korf	
 ;* Version            : V1.0
 ;* Date               : 11.05.2022
-;* Description        : Rahmen zur Lösung von GTP Woche 7-9 (Stoppuhr).
+;* Description        : Bearbeitung von GTP Woche 7-9 (Stoppuhr).
 ;* 
 ;* Team               : Jan Klindtworth      	Matrikel-Nr. 2884053                                        
 ;*						Xuan Hoang Duy Trinh 	Matrikel-Nr. 2881544 
